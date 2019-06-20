@@ -1,0 +1,51 @@
+#%RAML 1.0
+baseUri: https://anypoint.mulesoft.com/mocking/api/v1/links/ad6feb04-ca8d-4a8a-8bcb-d492f8a279cb/ # 
+title: globalWeather
+
+types:
+  weatherResponse: !include weatherResponseType.raml
+  citiesByCountryResponse: !include citiesByCountryResponseType.raml
+
+/weather:
+  get:
+    queryParameters:
+      city:
+        required: true
+        type: string
+    responses:
+      200:
+        body:
+          application/json:
+            type: weatherResponse
+            examples: !include weatherResponse.raml
+      404:
+        body:
+          application/json:
+            example: {"message":"no data found for provided city"}
+      400:
+        body:
+          application/json:
+            example: {"message":"invalid request"}
+      500:
+        body:
+          application/json:
+            example: {"message":"service unavailable - please try later"}
+
+/citiesByCountry:
+  get:
+    queryParameters:
+      country:
+        required: true
+        type: string
+    responses:
+      200:
+        body:
+          application/json:
+            type: citiesByCountryResponse []
+            examples: !include citiesByCountryResponseExample.raml
+            
+      
+  
+
+
+      
