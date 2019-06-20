@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:mule-ss="http://www.mulesoft.org/schema/mule/spring-security" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:secure-property-placeholder="http://www.mulesoft.org/schema/mule/secure-property-placeholder" xmlns:context="http://www.springframework.org/schema/context" xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/spring-security http://www.mulesoft.org/schema/mule/spring-security/current/mule-spring-security.xsd http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/secure-property-placeholder http://www.mulesoft.org/schema/mule/secure-property-placeholder/current/mule-secure-property-placeholder.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+
+
+    <http:listener-config xmlns:http="http://www.mulesoft.org/schema/mule/http" name="globalweather-httpListenerConfig" host="0.0.0.0" port="${https.port}" doc:name="HTTP Listener Configuration" protocol="HTTPS">
+        <tls:context>
+            <tls:key-store type="jks" path="keystore.jks" keyPassword="${keystore.password}" password="${ssl.password}"/>
+        </tls:context>
+    </http:listener-config>
+    <apikit:config xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" name="globalweather-config" raml="globalweather.raml" consoleEnabled="false" doc:name="Router"/>
+    <secure-property-placeholder:config name="Secure_Property_Placeholder" key="${encryption.key}" location="app-${env}.properties" doc:name="Secure Property Placeholder"/>
+    <flow name="globalWeatherAPI-main">
+        <http:listener xmlns:http="http://www.mulesoft.org/schema/mule/http" config-ref="globalweather-httpListenerConfig" path="/api/*" doc:name="HTTP" allowedMethods="GET"/>
+        <logger message="#['Request received: \n'+message]" level="INFO" doc:name="logIncomingRequest"/>
+        <apikit:router xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" config-ref="globalweather-config" doc:name="APIkit Router"/>
+        <exception-strategy ref="globalweather-apiKitGlobalExceptionMapping" doc:name="Reference Exception Strategy"/>
+    </flow>
+
+    <flow name="globalweather-console">
+        <http:listener xmlns:http="http://www.mulesoft.org/schema/mule/http" config-ref="globalweather-httpListenerConfig" path="/console/*" doc:name="HTTP"/>
+        <apikit:console xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" config-ref="globalweather-config" doc:name="APIkit Console"/>
+    </flow>
+
+    <flow name="get:/citiesByCountry:globalweather-config">
+        <flow-ref name="getCitiesByCountryFlow" doc:name="getCitiesByCountryFlow"/>
+
+    </flow>
+    <flow name="get:/weather:globalweather-config">
+        <flow-ref name="getWeatherFlow" doc:name="getWeatherFlow"/>
+    </flow>
+    
+    <apikit:mapping-exception-strategy xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" name="globalweather-apiKitGlobalExceptionMapping">
+        <apikit:mapping statusCode="404">
+            <apikit:exception value="org.mule.module.apikit.exception.NotFoundException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Resource not found&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="405">
+            <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Method not allowed&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="415">
+            <apikit:exception value="org.mule.module.apikit.exception.UnsupportedMediaTypeException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Unsupported media type&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="406">
+            <apikit:exception value="org.mule.module.apikit.exception.NotAcceptableException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Not acceptable&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="400">
+            <apikit:exception value="org.mule.module.apikit.exception.BadRequestException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{&quot;message&quot;:&quot;invalid request&quot;}" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="520">
+            <apikit:exception value="org.mule.module.json.validation.JsonSchemaValidationException"/>
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{&quot;message&quot;: &quot;sorry, error transforming downstream response&quot;}" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="500">
+            <apikit:exception value="org.mule.module.apikit.exception.ApikitRuntimeException"/>
+            <apikit:exception value="org.mule.api.MessagingException"/>
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;service unavailable-please try again later&quot;}" doc:name="Set Payload"/>
+        </apikit:mapping>
+    </apikit:mapping-exception-strategy>
+</mule>

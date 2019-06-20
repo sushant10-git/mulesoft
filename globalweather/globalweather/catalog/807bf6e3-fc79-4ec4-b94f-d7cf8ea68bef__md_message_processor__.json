@@ -1,0 +1,14 @@
+{
+    "inputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "getCitiesResponse"
+        },
+        "flowVariables": {
+            "city": {}
+        }
+    },
+    "outputMessageMetadata": {},
+    "id": "807bf6e3-fc79-4ec4-b94f-d7cf8ea68bef",
+    "version": "5.2.0.0"
+}

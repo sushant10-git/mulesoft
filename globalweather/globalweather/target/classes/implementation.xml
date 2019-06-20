@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:ws="http://www.mulesoft.org/schema/mule/ws" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/ws http://www.mulesoft.org/schema/mule/ws/current/mule-ws.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+    <ws:consumer-config name="globalWeather-WS-Consumer-Config" wsdlLocation="global-weather.wsdl" service="GlobalWeather" port="GlobalWeatherSoap12" serviceAddress="http://localhost:8080/GlobalWeather" doc:name="Web Service Consumer"/>
+    <sub-flow name="getWeatherFlow">
+        <set-variable variableName="city" value="#[message.inboundProperties.'http.query.params'.city]" doc:name="Variable"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+%namespace ns0 http://www.webserviceX.NET
+---
+{
+	ns0#GetWeather: {
+		ns0#CityName: flowVars.city
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <until-successful maxRetries="4" millisBetweenRetries="5000" synchronous="true" doc:name="Until Successful">
+            <ws:consumer config-ref="globalWeather-WS-Consumer-Config" operation="GetWeather" doc:name="GetWeatherWSConsumer"/>
+        </until-successful>
+        <logger message="#['WS response is: \n'+message.payloadAs(java.lang.String)]" level="INFO" doc:name="Log-WS-getWeatherResponse"/>
+        <flow-ref name="replaceInvalidCharacters" doc:name="replaceInvalidCharacters"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="76e134f2-fd8e-4fbb-85f6-7dd0b0f7a712">
+            <dw:input-payload doc:sample="sample_data\GetWeatherResponse.xml" mimeType="application/xml"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+%namespace ns0 http://www.webserviceX.NET
+---
+	payload.ns0#GetWeatherResponse.ns0#NewDataSet
+	]]></dw:set-payload>
+        </dw:transform-message>
+        <json:validate-schema schemaLocation="getWeatherResponseSchema.json" doc:name="Validate JSON Schema"/>
+        <logger message="#['Final Response To Client is: \n'+message.payload]" level="INFO" doc:name="LogResponseToClient"/>
+    </sub-flow>
+
+    <sub-flow name="getCitiesByCountryFlow">
+        <set-variable variableName="country" value="#[message.inboundProperties.'http.query.params'.country]" doc:name="Variable"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:input-variable doc:sample="sample_data\string_3.dwl" variableName="country"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+%namespace ns0 http://www.webserviceX.NET
+---
+{
+	ns0#GetCitiesByCountry: {
+		ns0#CountryName: flowVars.country
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <until-successful maxRetries="4" millisBetweenRetries="5000" synchronous="true" doc:name="Until Successful">
+            <ws:consumer config-ref="globalWeather-WS-Consumer-Config" operation="GetCitiesByCountry" doc:name="GetCitiesWSConsumer"/>
+        </until-successful>
+
+        <logger message="#['WS response is: \n'+message.payloadAs(java.lang.String)]" level="INFO" doc:name="Log-WS-getCitiesResponse"/>
+        <flow-ref name="replaceInvalidCharacters" doc:name="replaceInvalidCharacters"/>
+
+        <dw:transform-message doc:name="Transform Message" metadata:id="807bf6e3-fc79-4ec4-b94f-d7cf8ea68bef">
+            <dw:input-payload doc:sample="C:\Users\sushant_malik\Desktop\Deloitte\Responses\GetCitiesRawResponse.xml" mimeType="application/xml"/>
+            <dw:input-variable doc:sample="sample_data\string_4.dwl" variableName="city"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+%namespace ns0 http://www.webserviceX.NET
+%var input=payload
+%var country="Australia"
+---
+cities:payload.ns0#GetCitiesByCountryResponse.ns0#NewDataSet.*ns0#Table.ns0#City]]></dw:set-payload>
+        </dw:transform-message>
+        <json:validate-schema schemaLocation="getCitiesByCountryResponseSchema.json" doc:name="Validate JSON Schema"/>
+        <logger message="#['Final Response To Client is: \n'+message.payload]" level="INFO" doc:name="LogResponseToClient"/>
+    </sub-flow>
+    <sub-flow name="replaceInvalidCharacters">
+        <expression-component doc:name="Expression"><![CDATA[payload=payload.replaceAll("&lt\\;", "<");
+payload=payload.replaceAll("&gt\\;", ">");
+payload=payload.replaceAll("&amp\\;lt\\;", "<");
+payload=payload.replaceAll("&amp\\;gt\\;", ">");
+payload=payload.replaceAll("\\<\\!\\[CDATA\\[", "");
+payload=payload.replaceAll("\\]\\]\\>", "");
+payload=payload.replaceAll("&lt\\;", "<");]]></expression-component>
+        <logger message="#['better formed payload is: \n'+payload]" level="INFO" doc:name="Logger"/>
+    </sub-flow>
+</mule>
