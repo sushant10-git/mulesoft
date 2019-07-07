@@ -1,0 +1,113 @@
+{
+	"info": {
+		"_postman_id": "d9742a1d-b3cc-4f33-badb-83184a3a5b91",
+		"name": "WeatherExcercise",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "GetWeather",
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": {
+						"password": "admin",
+						"username": "admin"
+					}
+				},
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "https://localhost:8081/api/weather?city=abc",
+					"protocol": "https",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"weather"
+					],
+					"query": [
+						{
+							"key": "city",
+							"value": "abc"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetCities",
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": {
+						"password": "dev",
+						"username": "dev"
+					}
+				},
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "https://localhost:8081/api/citiesByCountry?country=abc",
+					"protocol": "https",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"citiesByCountry"
+					],
+					"query": [
+						{
+							"key": "country",
+							"value": "abc"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetWeather-SOAP",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/xml"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "<s12:Envelope xmlns:s12='http://www.w3.org/2003/05/soap-envelope'>\r\n  <s12:Body>\r\n    <ns1:GetWeather xmlns:ns1='http://www.webserviceX.NET'>\r\n\t<ns1:CityName>?XXX?</ns1:CityName>\r\n      <ns1:CountryName>?XXX?</ns1:CountryName>\r\n    </ns1:GetWeather>\r\n  </s12:Body>\r\n</s12:Envelope>"
+				},
+				"url": "http://localhost:8080/GlobalWeather"
+			},
+			"response": []
+		},
+		{
+			"name": "GetCities-SOAP",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/xml"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "<s11:Envelope xmlns:s11='http://schemas.xmlsoap.org/soap/envelope/'>\r\n  <s11:Body>\r\n    <ns1:GetCitiesByCountry xmlns:ns1='http://www.webserviceX.NET'>\r\n<!-- optional -->\r\n      <ns1:CountryName>?XXX?</ns1:CountryName>\r\n    </ns1:GetCitiesByCountry>\r\n  </s11:Body>\r\n</s11:Envelope>"
+				},
+				"url": "http://localhost:8080/GlobalWeather"
+			},
+			"response": []
+		}
+	]
+}
